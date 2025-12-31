@@ -24,9 +24,13 @@ namespace Simple_Todo_for_WP8
     /// <summary>
     /// Provides application-specific behavior to supplement the default Application class.
     /// </summary>
+    /// 
+    
+
     public sealed partial class App : Application
     {
         private TransitionCollection transitions;
+        public List<CheckBox> taskData { get; set; }
 
         List<string> list = new List<string>();
         /// <summary>
@@ -102,6 +106,7 @@ namespace Simple_Todo_for_WP8
                 }
             }
 
+            
             // Ensure the current window is active
             Window.Current.Activate();
         }
@@ -129,7 +134,25 @@ namespace Simple_Todo_for_WP8
         {
             var deferral = e.SuspendingOperation.GetDeferral();
             // TODO: Save application state and stop any background activity
+
             deferral.Complete();
+        }
+
+        public void loadData()
+        {
+            var diskTaskData = ApplicationData.Current.LocalSettings;
+            taskData = new List<CheckBox>();
+            foreach (KeyValuePair<string, object> saveValue in diskTaskData.Values)
+            {
+                CheckBox checkbox = new CheckBox();
+                string literal = (string)saveValue.Value;
+                int newlineCharIndex = literal.IndexOf('\n');
+                string content = literal.Substring(0, newlineCharIndex);
+                bool state = Convert.ToBoolean(literal.Substring(newlineCharIndex + 1));
+                checkbox.Content = content;
+                checkbox.IsChecked = state;
+                taskData.Add(checkbox);
+            }
         }
     }
 }
