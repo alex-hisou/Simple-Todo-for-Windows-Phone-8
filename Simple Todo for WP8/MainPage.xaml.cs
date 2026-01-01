@@ -28,6 +28,7 @@ namespace Simple_Todo_for_WP8
         int leftTasks;
         public bool editMode = false;
         public bool deleteMode = false;
+        const int checkMargin = 10;
         public MainPage()
         {
             this.InitializeComponent();
@@ -60,7 +61,7 @@ namespace Simple_Todo_for_WP8
         private void AppBarButton_Click(object sender, RoutedEventArgs e)
         {  
             var textbox = new TextBox();
-            Thickness margin = new Thickness(0, ((taskCount + 10)), 0, 0);
+            Thickness margin = new Thickness(0, ((taskCount + checkMargin)), 0, 0);
             textbox.Margin = margin;
             textbox.Width = TaskStack.Width;
             textbox.Name = $"textbox{taskCount}";
@@ -122,8 +123,8 @@ namespace Simple_Todo_for_WP8
             {
                 if (e.Key == Windows.System.VirtualKey.Enter && textbox.Text != "")
                 {
-                    TaskStack.Height = TaskStack.Height + 75;
                     var checkbox = new CheckBox();
+                    TaskStack.Height = TaskStack.Height + checkbox.Height + checkMargin;
                     checkbox.Content = textbox.Text;
                     checkbox.Margin = textbox.Margin;
                     TaskStack.Children.RemoveAt(taskCount);
