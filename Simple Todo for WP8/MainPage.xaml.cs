@@ -14,6 +14,7 @@ using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Navigation;
 using System.ComponentModel;
+using Windows.Storage;
 
 // The Blank Page item template is documented at http://go.microsoft.com/fwlink/?LinkId=391641
 
@@ -45,7 +46,19 @@ namespace Simple_Todo_for_WP8
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
             // TODO: Prepare page for display here.
-
+            (App.Current as App).loadData();
+            foreach (CheckBox checkbox in (App.Current as App).taskData)
+            {
+                TaskStack.Children.Add(checkbox);
+                checkBoxStatusHandler(checkbox);
+                attachDeleteEventHandler(checkbox);
+                if(checkbox.IsChecked == false)
+                {
+                    leftTasks++;
+                    displayTaskCounter.Text = Convert.ToString(leftTasks);
+                }
+                TaskStack.Height += 75;
+            }
             // TODO: If your application contains multiple pages, ensure that you are
             // handling the hardware Back button by registering for the
             // Windows.Phone.UI.Input.HardwareButtons.BackPressed event.
@@ -81,11 +94,13 @@ namespace Simple_Todo_for_WP8
             {
                 leftTasks--;
                 displayTaskCounter.Text = Convert.ToString(leftTasks);
+                saveTasks();
             };
             checkbox.Unchecked += (sender, e) =>
             {
                 leftTasks++;
                 displayTaskCounter.Text = Convert.ToString(leftTasks);
+                saveTasks();
             };
         }
 
@@ -111,6 +126,7 @@ namespace Simple_Todo_for_WP8
                         }
                         TaskStack.Children.Remove(checkbox);
                         taskCount--;
+                        saveTasks();
                         
                     }
                 }
@@ -132,6 +148,7 @@ namespace Simple_Todo_for_WP8
                     addTaskButton.IsEnabled = true;
                     checkBoxStatusHandler(checkbox);
                     attachDeleteEventHandler(checkbox);
+                    saveTasks();
                     taskCount++;
                     leftTasks++;
                     displayTaskCounter.Text = Convert.ToString(leftTasks);
@@ -195,6 +212,7 @@ namespace Simple_Todo_for_WP8
                 TaskStack.Children.Remove(currTextBox);
             }
             var checkboxes = TaskStack.Children.OfType<CheckBox>().ToList();
+            saveTasks();
             int index = 0;
             foreach(CheckBox currCheckBox in checkboxes)
             {
@@ -217,6 +235,21 @@ namespace Simple_Todo_for_WP8
                 deleteMode = true;
                 editTaskButton.IsEnabled = false;
                 addTaskButton.IsEnabled = false;
+            }
+            
+        }
+
+        public void saveTasks()
+        {
+            var checkboxes = TaskStack.Children.OfType<CheckBox>().ToList();
+            (App.Current as App).taskData = checkboxes;
+            var diskTaskData = ApplicationData.Current.LocalSettings;
+            int index = 0;
+            foreach(CheckBox checkbox in checkboxes)
+            {
+                string dataStateValues = checkbox.Content.ToString() + '\n' + checkbox.IsChecked.ToString();
+                diskTaskData.Values[Convert.ToString(index)] = dataStateValues;
+                index++;
             }
         }
     }
