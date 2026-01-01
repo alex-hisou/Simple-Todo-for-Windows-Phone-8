@@ -57,7 +57,8 @@ namespace Simple_Todo_for_WP8
                     leftTasks++;
                     displayTaskCounter.Text = Convert.ToString(leftTasks);
                 }
-                TaskStack.Height += 75;
+                TaskStack.Height += checkbox.Height + checkMargin;
+                taskCount++;
             }
             // TODO: If your application contains multiple pages, ensure that you are
             // handling the hardware Back button by registering for the
