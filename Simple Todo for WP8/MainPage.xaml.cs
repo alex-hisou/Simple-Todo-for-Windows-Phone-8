@@ -52,6 +52,7 @@ namespace Simple_Todo_for_WP8
                 TaskStack.Children.Add(checkbox);
                 checkBoxStatusHandler(checkbox);
                 attachDeleteEventHandler(checkbox);
+                attachHoldingEvent(checkbox);
                 if(checkbox.IsChecked == false)
                 {
                     leftTasks++;
@@ -65,6 +66,11 @@ namespace Simple_Todo_for_WP8
             // Windows.Phone.UI.Input.HardwareButtons.BackPressed event.
             // If you are using the NavigationHelper provided by some templates,
             // this event is handled for you.
+        }
+
+        private void initializeCheckBox(CheckBox checkbox)
+        {
+
         }
 
         private void listBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -87,6 +93,54 @@ namespace Simple_Todo_for_WP8
 
         private void textBox_TextChanged(object sender, TextChangedEventArgs e)
         {
+        }
+
+        private void attachHoldingEvent(CheckBox checkbox)
+        {
+            bool popupMenuIsShowing = false;
+            checkbox.Holding += async (sender, e) =>
+            {
+                if (popupMenuIsShowing == false)
+                {
+                    popupMenuIsShowing = true;
+                    var menu = new PopupMenu();
+                    menu.Commands.Add(new UICommand("Edit", null, 0));
+                    menu.Commands.Add(new UICommand("Delete", null, 1));
+                    Point holdPoint = new Point();
+                    holdPoint.X = e.GetPosition(null).X;
+                    holdPoint.Y = e.GetPosition(null).Y;
+                    var chosenCommand = await menu.ShowAsync(holdPoint);
+                    if (chosenCommand == null)
+                    {
+                        popupMenuIsShowing = false;
+                    }
+                    else if ((int?)chosenCommand.Id == 0)
+                    {
+                        editCheckBox(checkbox);
+                        popupMenuIsShowing = false;
+                    }
+                    else if ((int?)chosenCommand.Id == 1)
+                    {
+                        deleteCheckBox(checkbox);
+                        popupMenuIsShowing = false;
+                    }
+                }
+                
+            };
+        }
+
+        private void editCheckBox(CheckBox checkbox)
+        {
+            checkbox.Visibility = Visibility.Collapsed;
+            var textbox = new TextBox();
+            textbox.Margin = checkbox.Margin;
+            textbox.Width = checkbox.Width;
+            TaskStack.Children.Add(textbox);
+        }
+
+        private void deleteCheckBox(CheckBox checkbox)
+        {
+
         }
         
         private void checkBoxStatusHandler(CheckBox checkbox)
@@ -147,6 +201,7 @@ namespace Simple_Todo_for_WP8
                     TaskStack.Children.RemoveAt(taskCount);
                     TaskStack.Children.Add(checkbox);
                     addTaskButton.IsEnabled = true;
+                    attachHoldingEvent(checkbox);
                     checkBoxStatusHandler(checkbox);
                     attachDeleteEventHandler(checkbox);
                     saveTasks();
