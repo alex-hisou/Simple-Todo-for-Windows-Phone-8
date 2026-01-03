@@ -29,7 +29,7 @@ namespace Simple_Todo_for_WP8
         int leftTasks;
         public bool editMode = false;
         public bool deleteMode = false;
-        const int checkMargin = 10;
+        const int stackMargin = 10;
         public MainPage()
         {
             this.InitializeComponent();
@@ -51,14 +51,13 @@ namespace Simple_Todo_for_WP8
             {
                 TaskStack.Children.Add(checkbox);
                 checkBoxStatusHandler(checkbox);
-                attachDeleteEventHandler(checkbox);
                 attachHoldingEvent(checkbox);
                 if(checkbox.IsChecked == false)
                 {
                     leftTasks++;
                     displayTaskCounter.Text = Convert.ToString(leftTasks);
                 }
-                TaskStack.Height += checkbox.Height + checkMargin;
+                TaskStack.Height += checkbox.Height + stackMargin;
                 taskCount++;
             }
             // TODO: If your application contains multiple pages, ensure that you are
@@ -81,7 +80,7 @@ namespace Simple_Todo_for_WP8
         private void AppBarButton_Click(object sender, RoutedEventArgs e)
         {  
             var textbox = new TextBox();
-            Thickness margin = new Thickness(0, ((taskCount + checkMargin)), 0, 0);
+            Thickness margin = new Thickness(0, stackMargin, 0, 0);
             textbox.Margin = margin;
             textbox.Width = TaskStack.Width;
             textbox.Name = $"textbox{taskCount}";
@@ -100,7 +99,7 @@ namespace Simple_Todo_for_WP8
             bool popupMenuIsShowing = false;
             checkbox.Holding += async (sender, e) =>
             {
-                if (popupMenuIsShowing == false)
+                if (popupMenuIsShowing == false) //Prevents a double-invoke bug
                 {
                     popupMenuIsShowing = true;
                     var menu = new PopupMenu();
@@ -134,13 +133,47 @@ namespace Simple_Todo_for_WP8
             checkbox.Visibility = Visibility.Collapsed;
             var textbox = new TextBox();
             textbox.Margin = checkbox.Margin;
+            textbox.Text = (string)checkbox.Content;
             textbox.Width = checkbox.Width;
-            TaskStack.Children.Add(textbox);
+            TaskStack.Children.Insert(TaskStack.Children.IndexOf(checkbox),textbox);
+            textbox.Focus(FocusState.Programmatic);
+            textbox.KeyDown += (sender, e) =>
+            {
+                if(e.Key == Windows.System.VirtualKey.Enter)
+                {
+                    checkbox.Content = textbox.Text;
+                    TaskStack.Children.Remove(textbox);
+                    checkbox.Visibility = Visibility.Visible;
+                }
+            };
+            textbox.LostFocus += (sender, e) => 
+            {
+                TaskStack.Children.Remove(textbox);
+                checkbox.Visibility = Visibility.Visible;
+            };
         }
 
-        private void deleteCheckBox(CheckBox checkbox)
+        private async void deleteCheckBox(CheckBox checkbox)
         {
+            int currCheckBoxId = TaskStack.Children.IndexOf(checkbox);
+            var warning = new MessageDialog($"You are about to delete task #{currCheckBoxId + 1}. Are you sure?", "Confirm Action");
+            warning.Commands.Add(new UICommand("Yes", null, 1));
+            warning.Commands.Add(new UICommand("No", null, 0));
+            warning.DefaultCommandIndex = 0;
+            warning.CancelCommandIndex = 1;
+            IUICommand result = await warning.ShowAsync();
+            if ((int)result.Id == 1)
+            {
+                if (!((bool)checkbox.IsChecked))
+                {
+                    leftTasks--;
+                    displayTaskCounter.Text = Convert.ToString(leftTasks);
+                }
+                TaskStack.Children.Remove(checkbox);
+                taskCount--;
+                saveTasks();
 
+            }
         }
         
         private void checkBoxStatusHandler(CheckBox checkbox)
@@ -159,35 +192,6 @@ namespace Simple_Todo_for_WP8
             };
         }
 
-        private async void attachDeleteEventHandler(CheckBox checkbox)
-        {
-            checkbox.Tapped += async (sender, e) =>
-            {
-                if (deleteMode)
-                {
-                    int currCheckBoxId = TaskStack.Children.IndexOf(checkbox);
-                    var warning = new MessageDialog($"You are about to delete task #{currCheckBoxId}. Are you sure?", "Confirm Action");
-                    warning.Commands.Add(new UICommand("Yes", null, 1));
-                    warning.Commands.Add(new UICommand("No", null, 0));
-                    warning.DefaultCommandIndex = 0;
-                    warning.CancelCommandIndex = 1;
-                    IUICommand result = await warning.ShowAsync();
-                    if((int)result.Id == 1)
-                    {
-                        if (!((bool)checkbox.IsChecked))
-                        {
-                            leftTasks--;
-                            displayTaskCounter.Text = Convert.ToString(leftTasks);
-                        }
-                        TaskStack.Children.Remove(checkbox);
-                        taskCount--;
-                        saveTasks();
-                        
-                    }
-                }
-            };
-        }
-
         private void textboxHandler(TextBox textbox)
         {
             textbox.KeyDown += (sender, e) =>
@@ -195,7 +199,7 @@ namespace Simple_Todo_for_WP8
                 if (e.Key == Windows.System.VirtualKey.Enter && textbox.Text != "")
                 {
                     var checkbox = new CheckBox();
-                    TaskStack.Height = TaskStack.Height + checkbox.Height + checkMargin;
+                    TaskStack.Height = TaskStack.Height + checkbox.Height + stackMargin;
                     checkbox.Content = textbox.Text;
                     checkbox.Margin = textbox.Margin;
                     TaskStack.Children.RemoveAt(taskCount);
@@ -203,95 +207,12 @@ namespace Simple_Todo_for_WP8
                     addTaskButton.IsEnabled = true;
                     attachHoldingEvent(checkbox);
                     checkBoxStatusHandler(checkbox);
-                    attachDeleteEventHandler(checkbox);
                     saveTasks();
                     taskCount++;
                     leftTasks++;
                     displayTaskCounter.Text = Convert.ToString(leftTasks);
                 }
             };
-        }
-
-        private void editTaskButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (editMode)
-            {
-                editMode = false;
-                editTaskButton.Icon = new SymbolIcon(Symbol.Edit);
-                editTaskButton.Label = "Edit Task";
-                addTaskButton.IsEnabled = true;
-                deleteTaskButton.IsEnabled = true;
-                exitEditModeHandler();
-            }
-            else
-            {
-                editMode = true;
-                editTaskButton.Icon = new SymbolIcon(Symbol.Accept);
-                editTaskButton.Label = "Accept changes";
-                addTaskButton.IsEnabled = false;
-                deleteTaskButton.IsEnabled = false;
-                editModeHandler();
-            }
-
-        }
-
-        private void editModeHandler()
-        {
-            foreach (object currElement in TaskStack.Children)
-            {
-                if (currElement is CheckBox)
-                {
-                    CheckBox currCheckBox = (CheckBox)currElement;
-                    currCheckBox.Visibility = Visibility.Collapsed;
-                    var textbox = new TextBox();
-                    textbox.Text = (string)currCheckBox.Content;
-                    textbox.Margin = currCheckBox.Margin;
-                    TaskStack.Children.Add(textbox);
-                    textbox.KeyDown += (sender, e) =>
-                    {
-                        if (e.Key == Windows.System.VirtualKey.Enter)
-                        {
-                            editTaskButton.Focus(FocusState.Programmatic);
-                        }
-                    };
-                }
-            }
-        }
-
-        private void exitEditModeHandler()
-        {
-            var textboxes = TaskStack.Children.OfType<TextBox>().ToList();
-            List<string> checkboxesContent = new List<string>();
-            foreach(TextBox currTextBox in textboxes)
-            {
-                checkboxesContent.Add(currTextBox.Text);
-                TaskStack.Children.Remove(currTextBox);
-            }
-            saveTasks();
-            int index = 0;
-            foreach(CheckBox currCheckBox in (App.Current as App).taskData)
-            {
-                currCheckBox.Content = checkboxesContent[index];
-                currCheckBox.Visibility = Visibility.Visible;
-                index++;
-            }
-        }
-
-        private void deleteTaskButton_Click(object sender, RoutedEventArgs e)
-        {
-            if (deleteMode)
-            {
-                deleteMode = false;
-                editTaskButton.IsEnabled = true;
-                addTaskButton.IsEnabled = true;
-            }
-            else
-            {
-                deleteMode = true;
-                editTaskButton.IsEnabled = false;
-                addTaskButton.IsEnabled = false;
-            }
-            
         }
 
         public void saveTasks()
