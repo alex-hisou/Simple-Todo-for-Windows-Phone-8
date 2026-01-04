@@ -28,7 +28,6 @@ namespace Simple_Todo_for_WP8
         private int taskCount = 0;
         private int leftTasks = 0;
         private const int stackMargin = 10;
-        private List<int> freeSpaces = new List<int>();
         ApplicationDataContainer saveFile = ApplicationData.Current.LocalSettings;
 
         public MainPage()
@@ -59,16 +58,7 @@ namespace Simple_Todo_for_WP8
 
         private void initializeCheckBox(CheckBox checkbox, bool fromSaveFile)
         {
-            //TODO: Fix the list holes problem (Possibly refactor to LinkedList)
-            if (freeSpaces.Count == 0) //Checks if there are no holes in the list
-            {
-                TaskStack.Children.Add(checkbox);
-            }
-            else
-            {
-                TaskStack.Children.Insert(freeSpaces[0] , checkbox);
-                freeSpaces.Remove(0);
-            }
+            TaskStack.Children.Add(checkbox);
             checkBoxStatusHandler(checkbox);
             attachHoldingEvent(checkbox);
             if (checkbox.IsChecked == false)
@@ -79,10 +69,6 @@ namespace Simple_Todo_for_WP8
             taskCount++;
             if (!fromSaveFile)
             {
-                if ((App.Current as App).taskData.Contains(checkbox))
-                {
-                    (App.Current as App).taskData.Remove(checkbox);
-                }
                 int dataIndex = TaskStack.Children.IndexOf(checkbox);
                 (App.Current as App).taskData.Insert(dataIndex, checkbox);
                 string dataStateValues = checkbox.Content.ToString() + '\n' + checkbox.IsChecked.ToString();
@@ -93,7 +79,6 @@ namespace Simple_Todo_for_WP8
                 }
                 saveFile.Values.Add(dictionaryDataIndex, dataStateValues);
             }
-            checkbox.Content += Convert.ToString((App.Current as App).taskData.IndexOf(checkbox));
             TaskStack.Height += checkbox.Height + stackMargin;
         }
 
@@ -202,10 +187,19 @@ namespace Simple_Todo_for_WP8
                     leftTasks--;
                     displayTaskCounter.Text = Convert.ToString(leftTasks);
                 }
-                freeSpaces.Add(currCheckBoxId);
-                saveFile.Values.Remove(Convert.ToString(currCheckBoxId));
-                TaskStack.Children.Remove(checkbox);
+                saveFile.Values.Remove(Convert.ToString(TaskStack.Children.IndexOf(checkbox)));
                 (App.Current as App).taskData.Remove(checkbox);
+                TaskStack.Children.Remove(checkbox);
+                int index = 0; 
+                foreach (CheckBox currCheckbox in TaskStack.Children)
+                { //Reassigning the list and save file with updated indexes from TaskStack(prevents duplicate assignments)
+                    (App.Current as App).taskData.RemoveAt(index);
+                    (App.Current as App).taskData.Insert(index, currCheckbox);
+                    saveFile.Values.Remove(Convert.ToString(index));
+                    string dataStateValues = currCheckbox.Content.ToString() + '\n' + currCheckbox.IsChecked.ToString();
+                    saveFile.Values.Add(Convert.ToString(index), dataStateValues);
+                    index++;
+                } 
                 taskCount--;
             }
         }
